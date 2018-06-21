@@ -10,32 +10,93 @@
 #*****************************************************************************
 
 #------------------------------------------------------------------------------
-# <Put a Description Here>
+# Simple Make file which supports Host (Linux) and Cross platform: ARM
 #
 # Use: make [TARGET] [PLATFORM-OVERRIDES]
 #
 # Build Targets:
-#      <Put a description of the supported targets here>
-#
+#	   <FILE>.o - Builds <FILE>.o object file
+#	   <FILE>.i - Generate the preprocessed output of the <FILE>.i
+#      <FILE>.asm - Generate assembly output of <FILE>.asm	
+#	      
+#      compile-all : Compiles all files, doesn't build
+#	   build: Compile all object files and link into a final executable
+#	   clean: removes all generated files.
 # Platform Overrides:
-#      <Put a description of the supported Overrides here
+#      CPU -  ARM Cortex Architecture(cortex-m4) 
+#	   ARCH - ARM Architecture (thumb)
+#	   SPECS - Specs file to give the linker (nosys.specs)
 #
 #------------------------------------------------------------------------------
 include sources.mk
 
-# Platform Overrides
-PLATFORM = 
+ifeq ($(PLATFORM),MSP432)
+		CC = arm-none-eabi-gcc
+		LD = arm-none-eabi-ld
+		LINKER_FILE = ../msp432p401r.lds
+		LDFLAGS = -Wl,-Map=$(TARGET).map -T $(LINKER_FILE)
+		# Architectures Specific Flags ARM
+		CPU = cortex-m4
+		ARCH = thumb
+		SPECS = nosys.specs
+		FPU = fpv4-sp-d16
+		ARMFLAGS = -mcpu=$(CPU) -m$(ARCH) --specs=$(SPECS) -march=armv7e-m -mfloat-abi=hard -mfpu=$(FPU)		
 
-# Architectures Specific Flags
-LINKER_FILE = 
-CPU = 
-ARCH = 
-SPECS = 
+		#Size Utility
+		SIZE = $(CC)-size 
+else
+		CC = gcc
+		LD = ld
+		#Size Utility
+		SIZE = size
+		LDFLAGS = -Wl,-Map=$(TARGET).map
+endif
+
+
 
 # Compiler Flags and Defines
-CC = 
-LD = 
-LDFLAGS = 
-CFLAGS = 
-CPPFLAGs = 
+	#-D$(PLATFORM) is put inside the CFLAGS. 
+
+TARGET = c1m2
+
+CFLAGS = -Wall -Werror -g -O0 -std=c99 -D$(PLATFORM) $(ARMFLAGS)
+CPPFLAGS = -E
+
+OBJS = $(SOURCES:.c=.o)
+
+PREPRO = $(SOURCES:.c=.i)
+
+ASMS = $(SOURCES:.c=.asm)
+
+DEPS = $(SOURCES:.c=.d)
+
+%.o : %.c
+	$(CC) $(INCLUDES) -c $< $(CFLAGS) -o $@
+
+%.i : %.c
+	$(CC) $(INCLUDES) $(CPPFLAGS) $< $(CFLAGS) -o $@
+
+%.asm : %.c
+	$(CC) $(INCLUDES) -S $< $(CFLAGS) -o $@
+
+%.asm : $(TARGET).out
+	objdump -d $(TARGET).out >> $@
+
+%.d : %.c
+	$(CC) $(INCLUDES) -MM $< $(CFLAGS) -o $@
+
+.PHONY: compile-all
+compile-all: $(OBJS)
+	$(CC) $(INCLUDES) $(OBJS) -c $(CFLAGS) -o $(TARGET).o
+
+.PHONY: build
+build: $(TARGET).out $(TARGET).asm \
+	$(SIZE) -Atd $(TARGET).out
+
+$(TARGET).out: $(OBJS)
+	$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) -o $@ $(OBJS)
+
+.PHONY: clean
+clean:
+	rm -f $(TARGET).asm $(OBJS) $(TARGET).out $(TARGET).map $(PREPRO) $(ASMS) $(DEPS) 
 
