@@ -41,15 +41,17 @@ ifeq ($(PLATFORM),MSP432)
 		SPECS = nosys.specs
 		FPU = fpv4-sp-d16
 		ARMFLAGS = -mcpu=$(CPU) -m$(ARCH) --specs=$(SPECS) -march=armv7e-m -mfloat-abi=hard -mfpu=$(FPU)		
+		OBJDUMP = arm-none-eabi-objdump
 
 		#Size Utility
-		SIZE = $(CC)-size 
+		SIZE = arm-none-eabi-size 
 else
 		CC = gcc
 		LD = ld
 		#Size Utility
 		SIZE = size
 		LDFLAGS = -Wl,-Map=$(TARGET).map
+		OBJDUMP = objdump
 endif
 
 
@@ -61,6 +63,7 @@ TARGET = c1m2
 
 CFLAGS = -Wall -Werror -g -O0 -std=c99 -D$(PLATFORM) $(ARMFLAGS)
 CPPFLAGS = -E
+MAIN = main
 
 OBJS = $(SOURCES:.c=.o)
 
@@ -70,6 +73,16 @@ ASMS = $(SOURCES:.c=.asm)
 
 DEPS = $(SOURCES:.c=.d)
 
+#Had to use this because other than memory.* and main.* other files are not getting deleted.  
+FILES = *.asm *.i *.o *.d
+
+#Unable to create all the .d .asm .i files using just $(TARGET).d $(TARGET).i $(TARGET).asm  after make 
+#$(MAIN).d : $(DEPS)
+	
+#$(MAIN).asm : $(ASMS)
+	
+#$(MAIN).i : $(PREPRO)
+	
 %.o : %.c
 	$(CC) $(INCLUDES) -c $< $(CFLAGS) -o $@
 
@@ -79,24 +92,26 @@ DEPS = $(SOURCES:.c=.d)
 %.asm : %.c
 	$(CC) $(INCLUDES) -S $< $(CFLAGS) -o $@
 
-%.asm : $(TARGET).out
-	objdump -d $(TARGET).out >> $@
+$(TARGET).asm : $(TARGET).out
+	$(OBJDUMP) -d $(TARGET).out >> $@
 
 %.d : %.c
-	$(CC) $(INCLUDES) -MM $< $(CFLAGS) -o $@
+	$(CC) $(INCLUDES) -M $< $(CFLAGS) -o $@
 
 .PHONY: compile-all
 compile-all: $(OBJS)
 	$(CC) $(INCLUDES) $(OBJS) -c $(CFLAGS) -o $(TARGET).o
 
 .PHONY: build
-build: $(TARGET).out $(TARGET).asm \
-	$(SIZE) -Atd $(TARGET).out
+build: $(TARGET).out  $(TARGET).asm
 
-$(TARGET).out: $(OBJS)
+
+$(TARGET).out: $(OBJS) $(DEPS) 
 	$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) -o $@ $(OBJS)
-
+	$(SIZE) -Atd $(TARGET).out
+	$(SIZE) $(TARGET).out
 .PHONY: clean
 clean:
-	rm -f $(TARGET).asm $(OBJS) $(TARGET).out $(TARGET).map $(PREPRO) $(ASMS) $(DEPS) 
+	rm -f $(TARGET).asm $(FILES) $(TARGET).out $(TARGET).map $(PREPRO) $(ASMS) $(DEPS) $(OBJS)
+
 
