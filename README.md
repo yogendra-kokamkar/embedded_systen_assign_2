@@ -4,6 +4,9 @@
  Date: 06/21/2018
 
 
+#The make file is in src directory.
+#USE $make build PLATFORM=MSP432 or $make build PLATFORM=HOST to build
+
 #This Assignment is my solution to Coursera's Embedded Software Essentials course specialization, module 2.
 
 # Familiarizes with GNU's gcc, Make, size, objcpy and objdump utilities. 
