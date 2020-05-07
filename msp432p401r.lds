@@ -64,7 +64,7 @@ SECTIONS {
     } > REGION_TEXT
 
     /* The following three sections show the usage of the INFO flash memory  */
-    /* INFO flash memory is intended to be used for the following            */
+    /* INFO flash memory is intended to be used for the following            */ 
     /* device specific purposes:                                             */
     /* Flash mailbox for device security operations                          */
     PROVIDE (_mailbox_base_address = 0x200000);
