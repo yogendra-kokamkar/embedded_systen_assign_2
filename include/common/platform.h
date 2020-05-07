@@ -31,4 +31,3 @@
 #endif
 
 #endif /* __PLATFORM_H__ */
-
